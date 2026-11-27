@@ -1,0 +1,18 @@
+# Example: HaskShield next to a relay, behind a reverse proxy.
+#
+# The reverse proxy (Caddy, nginx) keeps handling TLS and sends relay
+# traffic to haskshield:7778 instead of straight to the relay.
+
+services:
+  haskshield:
+    build: .
+    restart: unless-stopped
+    environment:
+      # The relay, by its service name on the same Docker network.
+      HASKSHIELD_UPSTREAM: ws://strfry:7777
+      # Only because a reverse proxy sits in front. Never set this when
+      # clients can reach HaskShield directly.
+      HASKSHIELD_TRUST_PROXY: "1"
+      # Optional: ask for proof of work while the relay is being flooded.
+      # HASKSHIELD_PRESSURE_POW: "16"
+    # No published ports: only the reverse proxy needs to reach it.
