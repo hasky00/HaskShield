@@ -107,10 +107,16 @@ and HaskShield needs `HASKSHIELD_TRUST_PROXY=1`, so it counts the client's addre
 
 ## Check it
 
-Once HaskShield is running, look at it the way a client would:
+Once HaskShield is running, look at it the way a client would. With Docker:
 
 ```
-cargo run --example check -- ws://127.0.0.1:7778
+docker exec haskshield haskshield-check
+```
+
+or from a checkout:
+
+```
+cargo run --bin haskshield-check -- ws://127.0.0.1:7778
 ```
 
 This reads the relay information document, opens a subscription, publishes a signed event from a throwaway key, and then tries a tampered one, which must be refused. The events are ephemeral (kind 20001), so the relay does not store them.

@@ -2,7 +2,7 @@
 //! client would see it.
 //!
 //! ```text
-//! cargo run --example check -- ws://127.0.0.1:7778
+//! haskshield-check ws://127.0.0.1:7778
 //! ```
 //!
 //! It reads the relay information document, opens a subscription, and
