@@ -2,7 +2,7 @@
 
 A Nostr-native shield that sits in front of a relay and keeps spam and floods out, without breaking any client.
 
-Status: design stage. Nothing here is built yet. This file describes the plan.
+Status: early. Only layer 1's per-IP connection cap is built so far. The rest of this file describes the plan.
 
 ## Why
 
@@ -57,9 +57,23 @@ Layers 4 and 5 switch on only when needed. In calm times the relay stays as open
 - It does not read or judge the meaning of ordinary posts. It limits behaviour, not opinions.
 - It does not need, or ask for, any change in Nostr clients.
 
+## Run it
+
+```
+HASKSHIELD_LISTEN=0.0.0.0:7778 \
+HASKSHIELD_UPSTREAM=ws://127.0.0.1:7777 \
+HASKSHIELD_MAX_CONN_PER_IP=20 \
+cargo run --release
+```
+
+Set `HASKSHIELD_TRUST_PROXY=1` only when HaskShield runs behind a reverse proxy such as Caddy, so the client IP is read from `X-Forwarded-For`.
+
+Known gap: plain HTTP requests, including the relay information document (NIP-11), are not passed through yet.
+
+Written in Rust.
+
 ## Open decisions
 
-- Language: Rust or Node
 - Proxy only, or also a strfry write-policy plugin for layer 3
 - How pressure mode decides that the relay is under attack
 - Licence
