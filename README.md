@@ -2,7 +2,7 @@
 
 A Nostr-native shield that sits in front of a relay and keeps spam and floods out, without breaking any client.
 
-Status: early, version 0.1. Everything described under "What it checks" is built and covered by tests against a stand-in relay. It has not yet run in front of a live relay. Treat it as something to try on a test relay first.
+Status: early, version 0.1. Everything described under "What it checks" is built and covered by tests. It has been run end to end in front of one real relay (nostr-rs-relay) on a test machine, but not yet in front of a public relay with real traffic. Try it on a test relay first.
 
 ## Why
 
@@ -87,7 +87,13 @@ HASKSHIELD_UPSTREAM=ws://127.0.0.1:7777 cargo run --release
 
 HaskShield then listens on port 7778. Point your reverse proxy at it instead of at the relay.
 
-With Docker, see `docker-compose.example.yml`. The `Dockerfile` in this repository has not been build-tested yet.
+With Docker, an image is built from every change to `main`:
+
+```
+docker run -d --name haskshield -e HASKSHIELD_UPSTREAM=ws://strfry:7777 ghcr.io/hasky00/haskshield:latest
+```
+
+See `docker-compose.example.yml` for running it next to a relay.
 
 Behind Caddy, the relay's site block becomes:
 
@@ -98,6 +104,16 @@ relay.example.com {
 ```
 
 and HaskShield needs `HASKSHIELD_TRUST_PROXY=1`, so it counts the client's address and not Caddy's.
+
+## Check it
+
+Once HaskShield is running, look at it the way a client would:
+
+```
+cargo run --example check -- ws://127.0.0.1:7778
+```
+
+This reads the relay information document, opens a subscription, publishes a signed event from a throwaway key, and then tries a tampered one, which must be refused. The events are ephemeral (kind 20001), so the relay does not store them.
 
 ## Settings
 
