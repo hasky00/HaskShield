@@ -2,7 +2,7 @@
 
 A Nostr-native shield that sits in front of a relay and keeps spam and floods out, without breaking any client.
 
-Status: early. Only layer 1's per-IP connection cap is built so far. The rest of this file describes the plan.
+Status: early. Layers 1 and 2 are built and tested against a stand-in relay. It has not run in front of a live relay yet. Layers 3 to 5 are still plans.
 
 ## Why
 
@@ -33,9 +33,9 @@ Checks run cheapest first, so junk is rejected before it costs anything:
 
 | Layer | What it checks | Cost |
 |---|---|---|
-| 1. Connection | Connections per IP, new connections per second, idle sockets | Very low |
-| 2. Request | REQ rate per connection, number of open subscriptions, filter size | Low |
-| 3. Event | Event size, rate per pubkey, duplicate content | Low |
+| 1. Connection | Connections per IP, new connections per minute, slow handshakes | Very low |
+| 2. Message | Message rate per IP, message size | Low |
+| 3. Event | Rate per pubkey, duplicate content, number of open subscriptions | Low |
 | 4. Proof | Proof of work (NIP-13), auth (NIP-42) when the relay is under pressure | Medium |
 | 5. Review | Optional slower check for unclear cases only | High |
 
@@ -62,20 +62,36 @@ Layers 4 and 5 switch on only when needed. In calm times the relay stays as open
 ```
 HASKSHIELD_LISTEN=0.0.0.0:7778 \
 HASKSHIELD_UPSTREAM=ws://127.0.0.1:7777 \
-HASKSHIELD_MAX_CONN_PER_IP=20 \
 cargo run --release
 ```
 
-Set `HASKSHIELD_TRUST_PROXY=1` only when HaskShield runs behind a reverse proxy such as Caddy, so the client IP is read from `X-Forwarded-For`.
+Point clients (or your reverse proxy) at HaskShield instead of the relay.
 
-Known gap: plain HTTP requests, including the relay information document (NIP-11), are not passed through yet.
+| Setting | Default | Meaning |
+|---|---|---|
+| `HASKSHIELD_LISTEN` | `0.0.0.0:7778` | Address HaskShield listens on |
+| `HASKSHIELD_UPSTREAM` | `ws://127.0.0.1:7777` | The relay behind it |
+| `HASKSHIELD_MAX_CONN_PER_IP` | `20` | Open connections one IP may hold |
+| `HASKSHIELD_MAX_NEW_CONN_PER_MIN` | `60` | New connections one IP may open per minute |
+| `HASKSHIELD_MSGS_PER_SEC` | `20` | Messages per second per IP, with bursts of five times this |
+| `HASKSHIELD_MAX_MESSAGE_BYTES` | `131072` | Largest single message from a client |
+| `HASKSHIELD_TRUST_PROXY` | off | Set to `1` only behind a reverse proxy such as Caddy, so the client IP is read from `X-Forwarded-For` |
 
-Written in Rust.
+What a client sees when it is over a limit:
+
+- Too many connections: the connection is refused with HTTP 429.
+- Too many messages: `["OK", id, false, "rate-limited: slow down"]` for an event, `["CLOSED", sub, "rate-limited: slow down"]` for a subscription. A client that keeps going is disconnected.
+- A message that is too large: the connection is closed.
+
+IPv6 clients are counted per /64 network. Plain HTTP requests, including the relay information document (NIP-11), are passed through to the relay; this needs a `ws://` upstream.
+
+Written in Rust. Run the tests with `cargo test`.
 
 ## Open decisions
 
 - Proxy only, or also a strfry write-policy plugin for layer 3
 - How pressure mode decides that the relay is under attack
+- Per-pubkey limits need the event signature checked first, otherwise anyone could get another person's key rate-limited by sending fake events in their name
 - Licence
 
 ## Test bed
